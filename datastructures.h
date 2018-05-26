@@ -17,8 +17,8 @@ struct Time {
 };
 
 
-struct Leaders {
-    char name[21];
+struct Leader {
+    char name[11];
     Time time;
     int fieldWidth;
     int fieldHeight;
@@ -29,11 +29,10 @@ struct Leaders {
 ////////////////////////// Game scene
 enum GameSceneType {
     GameScene_MainMenu = 0,
-    GameScene_Leaders,
     GameScene_NewGame,
     GameScene_MakeGame,
     GameScene_Game,
-    GameScene_Liders,
+    GameScene_Leaders,
     GameScene_Wictory,
     GameScene_AmountScenes
 };

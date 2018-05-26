@@ -14,7 +14,7 @@ Game g_game;
 GameFieldSetings g_gameSetings;
 
 /////////////////////// Leaders
-Leaders g_leaders;
+std::vector<Leader> g_leaders(11);
 
 /////////////////////// Mouse
 GameMouse g_gameMouse;

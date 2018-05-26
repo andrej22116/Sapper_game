@@ -54,7 +54,8 @@ void drawCells();
 
 // Other
 void drawGameOver();
-void drawLidersTable();
+void drawLeadersTable(int x, int y);
+void drawText(const char* text, float x, float y);
 
 // ScenesDrawing
 void sceneRenderer_MainMenu();
@@ -76,6 +77,8 @@ void setCellFlag(int x, int y);
 void gameTimer(int value);
 void checkVictory();
 
+void calculateFieldLocation();
+
 // Scenes control logick
 void mouseClickFunction_MainMenu(int button, int state, int x, int y);
 void mouseMotionFunction_MainMenu(int x, int y);
@@ -94,6 +97,7 @@ void mouseMotionFunction_Leaders(int x, int y);
 
 void mouseClickFunction_Victory(int button, int state, int x, int y);
 void mouseMotionFunction_Victory(int x, int y);
+void keyboardFunction_Victory(unsigned char key, int x, int y);
 
 
 //=========================DATA CONTROLING FUNCTIONS========================//
@@ -136,14 +140,20 @@ void mainRendererFunction()
 
     glLoadIdentity();
 
-    g_gameScenes[g_currentScene].renderFunction();
+    if ( g_gameScenes[g_currentScene].renderFunction )
+    {
+        g_gameScenes[g_currentScene].renderFunction();
+    }
 
     glutSwapBuffers();
 }
 
 void mainKeyboardFunction(unsigned char key, int x, int y)
 {
-
+    if ( g_gameScenes[g_currentScene].keyboardFunction )
+    {
+        g_gameScenes[g_currentScene].keyboardFunction(key, x, y);
+    }
 }
 
 void mainMouseClickFunction(int button, int state, int x, int y)
@@ -195,6 +205,8 @@ void mainResizeFunction(int width, int height)
 //===========================INITIALIZE FUNCTIONS===========================//
 void initializationGame()
 {
+    loadLeadersTable();
+
     loadAllTextures();
     // Initialize Main menu functions
     g_gameScenes[GameScene_MainMenu].renderFunction = sceneRenderer_MainMenu;
@@ -229,7 +241,7 @@ void initializationGame()
     // Initialize Victory functions
     g_gameScenes[GameScene_Wictory].renderFunction = sceneRenderer_Victory;
     g_gameScenes[GameScene_Wictory].mouseFunction = mouseMotionFunction_Victory;
-    g_gameScenes[GameScene_Wictory].keyboardFunction = nullptr;
+    g_gameScenes[GameScene_Wictory].keyboardFunction = keyboardFunction_Victory;
     g_gameScenes[GameScene_Wictory].mouseClickFunction = mouseClickFunction_Victory;
     /*
     loadHighscoresTable();
@@ -627,6 +639,75 @@ void drawGameOver()
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void drawLeadersTable(int x, int y)
+{
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glBegin(GL_QUADS);
+    {
+        glVertex2i(g_windowCenter_x - 250 + x, g_windowCenter_y - 220 + y);
+        glVertex2i(g_windowCenter_x - 250 + x, g_windowCenter_y + 220 + y);
+        glVertex2i(g_windowCenter_x + 250 + x, g_windowCenter_y + 220 + y);
+        glVertex2i(g_windowCenter_x + 250 + x, g_windowCenter_y - 220 + y);
+    }
+    glEnd();
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+    int y_offset = g_windowCenter_y - 190 + y;
+    glBegin(GL_LINES);
+    {
+        glVertex2i(g_windowCenter_x - 20 + x, g_windowCenter_y - 220 + y);
+        glVertex2i(g_windowCenter_x - 20 + x, g_windowCenter_y + 220 + y);
+
+        glVertex2i(g_windowCenter_x + 110 + x, g_windowCenter_y - 220 + y);
+        glVertex2i(g_windowCenter_x + 110 + x, g_windowCenter_y + 220 + y);
+
+        for (int i = 0; i < 10; i++)
+        {
+            glVertex2i(g_windowCenter_x - 250 + x, y_offset);
+            glVertex2i(g_windowCenter_x + 250 + x, y_offset);
+
+            y_offset += 41;
+        }
+    }
+    glEnd();
+
+    char buffer[30];
+    y_offset = g_windowCenter_y - 190 + y;
+    for (int i = 0; i < 10; i++)
+    {
+
+        sprintf(buffer, "%.2d.", i + 1);
+        drawText(buffer, g_windowCenter_x - 245, y_offset + 27);
+
+        sprintf(buffer, "%s", g_leaders[i].name);
+        drawText(buffer, g_windowCenter_x - 210, y_offset + 27);
+
+        sprintf(buffer, "%.2d:%.2d:%.2d", g_leaders[i].time.hours,
+                g_leaders[i].time.minutes, g_leaders[i].time.seconds);
+        drawText(buffer, g_windowCenter_x + 10, y_offset + 27);
+
+        sprintf(buffer, "%.2dx%.2d:%.3d", g_leaders[i].fieldWidth,
+                g_leaders[i].fieldHeight, g_leaders[i].fieldMinesAmount);
+        drawText(buffer, g_windowCenter_x + 135, y_offset + 27);
+        y_offset += 41;
+    }
+
+
+
+    drawText("NAME", g_windowCenter_x - 230, g_windowCenter_y - 200);
+    drawText("TIME", g_windowCenter_x + 20, g_windowCenter_y - 200);
+    drawText("WxH:Mines", g_windowCenter_x + 130, g_windowCenter_y - 200);
+}
+
+void drawText(const char* text, float x, float y)
+{
+    glRasterPos2i(x, y);
+    int textLen = strlen(text);
+    for(int i = 0; i < textLen; i++)
+    {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,(int)text[i]);
+    }
+}
 
 // ScenesDrawing
 void sceneRenderer_MainMenu()
@@ -704,12 +785,53 @@ void sceneRenderer_Game()
 
 void sceneRenderer_Leaders()
 {
+    glColor3f(0.08f, 0.09f, 0.1f);
+    glBegin(GL_QUADS);
+    {
+        glVertex2i(0, 0);
+        glVertex2i(0, g_windowHeight);
+        glVertex2i(g_windowWidth, g_windowHeight);
+        glVertex2i(g_windowWidth, 0);
+    }
+    glEnd();
 
+    glColor3f(0.8f, 0.8f, 1.0f);
+    drawText("Table of leaders", g_windowCenter_x - 70, g_windowCenter_y - 250);
+    drawLeadersTable(0, 0);
+    drawButton(g_windowCenter_x - 250, g_windowCenter_y + 225, 500, 70, Button_Ok);
 }
 
 void sceneRenderer_Victory()
 {
+    glColor3f(0.08f, 0.09f, 0.1f);
+    glBegin(GL_QUADS);
+    {
+        glVertex2i(0, 0);
+        glVertex2i(0, g_windowHeight);
+        glVertex2i(g_windowWidth, g_windowHeight);
+        glVertex2i(g_windowWidth, 0);
+    }
+    glEnd();
 
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glBegin(GL_QUADS);
+    {
+        glVertex2i(g_windowCenter_x - 250, g_windowCenter_y - 270);
+        glVertex2i(g_windowCenter_x - 250, g_windowCenter_y - 230);
+        glVertex2i(g_windowCenter_x + 250, g_windowCenter_y - 230);
+        glVertex2i(g_windowCenter_x + 250, g_windowCenter_y - 270);
+    }
+    glEnd();
+
+    glColor3f(0.8f, 0.8f, 1.0f);
+    drawText("You're MALADEC: ", g_windowCenter_x - 70, g_windowCenter_y - 280);
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+    drawText("Enter your name: ", g_windowCenter_x - 240, g_windowCenter_y - 240);
+    drawText(g_leaders[10].name, g_windowCenter_x - 100, g_windowCenter_y - 240);
+
+    drawLeadersTable(0, 0);
+    drawButton(g_windowCenter_x - 250, g_windowCenter_y + 225, 500, 70, Button_Yahoo);
 }
 
 //=============================LOGICK FUNCTIONS=============================//
@@ -739,6 +861,7 @@ void makeNewGame()
     g_game = std::move(newGame);
 
     generateField();
+    calculateFieldLocation();
 
     glutTimerFunc(1000, gameTimer, g_game.gameID);
 }
@@ -866,8 +989,13 @@ void openFreeCells(int startCell_x, int startCell_y)
              continue;
         }
 
-        if (g_game.field.field[y][x].isSuspect
-                || g_game.field.field[y][x].type != 0)
+        if (g_game.field.field[y][x].isSuspect)
+        {
+            g_game.field.field[y][x].isSuspect = false;
+            g_game.field.flagsAmount++;
+        }
+
+        if (g_game.field.field[y][x].type != 0)
         {
             continue;
         }
@@ -961,7 +1089,19 @@ void checkVictory()
         }
     }
 
-    cout << "Win!!!!" << endl;
+    memset(&g_leaders[10], 0, sizeof(Leader));
+    g_leaders[10].time = std::move(g_game.time);
+    g_leaders[10].fieldWidth = g_game.field.width;
+    g_leaders[10].fieldHeight = g_game.field.height;
+    g_leaders[10].fieldMinesAmount = g_game.field.bombsAmount;
+    g_currentScene = GameScene_Wictory;
+}
+
+
+void calculateFieldLocation()
+{
+    g_gameFieldPos_x = (g_windowWidth / 2.0) - (g_game.field.width / 2.0 * g_cellSize);
+    g_gameFieldPos_y = ((g_windowHeight + g_headerHeight) / 2.0) - (g_game.field.height / 2.0 * g_cellSize);
 }
 
 
@@ -980,7 +1120,12 @@ void mouseClickFunction_MainMenu(int button, int state, int x, int y)
         else if (g_gameMouse.buttonId == Button_Load)
         {
             loadGame();
+            calculateFieldLocation();
             g_currentScene = GameScene_Game;
+        }
+        else if (g_gameMouse.buttonId == Button_Liders)
+        {
+            g_currentScene = GameScene_Leaders;
         }
         else if (g_gameMouse.buttonId == Button_Exit)
         {
@@ -1238,82 +1383,87 @@ void mouseClickFunction_Leaders(int button, int state, int x, int y)
 {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && g_gameMouse.mouseOnButton)
     {
-        if (g_gameMouse.buttonId == Button_NewGame)
-        {
-            g_currentScene = GameScene_Game;
-            makeNewGame();
-        }
-        else if (g_gameMouse.buttonId == Button_Exit)
-        {
-            exit(0);
-        }
+        g_currentScene = GameScene_MainMenu;
     }
 }
 
 void mouseMotionFunction_Leaders(int x, int y)
 {
-    if ( x >= g_windowCenter_x - 255 && x <= g_windowCenter_x + 255
-         && y >= g_windowCenter_y - 140 && y <= g_windowCenter_y + 140 )
+    if ( x >= g_windowCenter_x - 250 && x <= g_windowCenter_x + 250
+         && y >= g_windowCenter_y + 225 && y <= g_windowCenter_y + 295 )
     {
         g_gameMouse.mouseOnButton = true;
-        if ( y < g_windowCenter_y - 70)
-        {
-            g_gameMouse.buttonId = Button_NewGame;
-        }
-        else if (y < g_windowCenter_y)
-        {
-            g_gameMouse.buttonId = Button_Load;
-        }
-        else if (y < g_windowCenter_y + 70)
-        {
-            g_gameMouse.buttonId = Button_Liders;
-        }
-        else
-        {
-            g_gameMouse.buttonId = Button_Exit;
-        }
+        g_gameMouse.buttonId = Button_Ok;
     }
 }
 
 
 void mouseClickFunction_Victory(int button, int state, int x, int y)
 {
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && g_gameMouse.mouseOnButton)
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN
+            && g_gameMouse.mouseOnButton && g_leaders[10].name[0])
     {
-        if (g_gameMouse.buttonId == Button_NewGame)
-        {
-            g_currentScene = GameScene_Game;
-            makeNewGame();
-        }
-        else if (g_gameMouse.buttonId == Button_Exit)
-        {
-            exit(0);
-        }
+        sort(g_leaders.begin(), g_leaders.end(), [](const Leader& left, const Leader& right){
+            if (!left.name[0]) return false;
+            if (!right.name[0]) return true;
+
+            bool minesEq = left.fieldMinesAmount == right.fieldMinesAmount;
+            bool hoursEq = left.time.hours == right.time.hours;
+            bool minsEq = left.time.minutes == right.time.minutes;
+
+            if (left.fieldMinesAmount > right.fieldMinesAmount)
+            {
+                return true;
+            }
+            else if (left.fieldWidth * left.fieldHeight < right.fieldWidth * right.fieldHeight)
+            {
+                return true;
+            }
+            else if (minesEq && left.time.hours < right.time.hours)
+            {
+                return true;
+            }
+            else if (minesEq && hoursEq && left.time.minutes < right.time.minutes)
+            {
+                return true;
+            }
+            else if (minesEq && hoursEq && minsEq && left.time.seconds < right.time.seconds)
+            {
+                return true;
+            }
+            return false;
+        });
+
+        saveLeadersTable();
+        g_currentScene = GameScene_Leaders;
     }
 }
 
 void mouseMotionFunction_Victory(int x, int y)
 {
-    if ( x >= g_windowCenter_x - 255 && x <= g_windowCenter_x + 255
-         && y >= g_windowCenter_y - 140 && y <= g_windowCenter_y + 140 )
+    if ( x >= g_windowCenter_x - 250 && x <= g_windowCenter_x + 250
+         && y >= g_windowCenter_y + 225 && y <= g_windowCenter_y + 295 )
     {
         g_gameMouse.mouseOnButton = true;
-        if ( y < g_windowCenter_y - 70)
+        g_gameMouse.buttonId = Button_Yahoo;
+    }
+}
+
+void keyboardFunction_Victory(unsigned char key, int x, int y)
+{
+    int textlen = strlen(g_leaders[10].name);
+    if (key == 8)
+    {
+        if (textlen != 0)
         {
-            g_gameMouse.buttonId = Button_NewGame;
+            textlen--;
         }
-        else if (y < g_windowCenter_y)
-        {
-            g_gameMouse.buttonId = Button_Load;
-        }
-        else if (y < g_windowCenter_y + 70)
-        {
-            g_gameMouse.buttonId = Button_Liders;
-        }
-        else
-        {
-            g_gameMouse.buttonId = Button_Exit;
-        }
+        g_leaders[10].name[textlen] = '\0';
+        return;
+    }
+    else if (key >= 25 && textlen < 10)
+    {
+        g_leaders[10].name[textlen] = key;
     }
 }
 
@@ -1382,29 +1532,25 @@ void loadGame()
 
 void saveLeadersTable()
 {
-    /*
-    ofstream fout("highscores.bin", ios::binary);
+    ofstream fout("leaders.bin", ios::binary);
     if (!fout)
     {
         return;
     }
-    fout.write((char*)g_highscoresTable.data(), sizeof(Highscore) * 10);
+    fout.write((char*)g_leaders.data(), sizeof(Leader) * 10);
     fout.close();
-    */
 }
 
 void loadLeadersTable()
 {
-    /*
-    ifstream fin("highscores.bin", ios::binary);
+    ifstream fin("leaders.bin", ios::binary);
     if (!fin)
     {
-        memset(g_highscoresTable.data(), 0, sizeof(Highscore) * 10);
+        memset(g_leaders.data(), 0, sizeof(Leader) * 10);
         return;
     }
-    fin.read((char*)g_highscoresTable.data(), sizeof(Highscore) * 10);
+    fin.read((char*)g_leaders.data(), sizeof(Leader) * 10);
     fin.close();
-    */
 }
 
 GLuint loadTexture(string pathToTexture)
