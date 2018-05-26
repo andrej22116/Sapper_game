@@ -20,6 +20,9 @@ struct Time {
 struct Leaders {
     char name[21];
     Time time;
+    int fieldWidth;
+    int fieldHeight;
+    int fieldMinesAmount;
 };
 
 

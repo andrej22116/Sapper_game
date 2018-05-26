@@ -54,6 +54,7 @@ void drawCells();
 
 // Other
 void drawGameOver();
+void drawLidersTable();
 
 // ScenesDrawing
 void sceneRenderer_MainMenu();
@@ -916,16 +917,12 @@ void gameTimer(int value)
     {
         g_game.time.minutes++;
         g_game.time.seconds = 0;
+        saveGame();
     }
     if (g_game.time.minutes == 60)
     {
         g_game.time.hours++;
         g_game.time.minutes = 0;
-    }
-
-    if (g_game.time.seconds % 10 == 0)
-    {
-        saveGame();
     }
 
     glutTimerFunc(1000, gameTimer, value);
@@ -979,6 +976,11 @@ void mouseClickFunction_MainMenu(int button, int state, int x, int y)
             //glutReshapeWindow(g_game.field.width * g_cellSize, g_game.field.height * g_cellSize + g_headerHeight);
             //g_currentScene = GameScene_Game;
             g_currentScene = GameScene_NewGame;
+        }
+        else if (g_gameMouse.buttonId == Button_Load)
+        {
+            loadGame();
+            g_currentScene = GameScene_Game;
         }
         else if (g_gameMouse.buttonId == Button_Exit)
         {
@@ -1191,6 +1193,7 @@ void mouseClickFunction_Game(int button, int state, int x, int y)
         }
         else if (g_gameMouse.mouseOnButton && g_gameMouse.buttonId == Button_MainMenu)
         {
+            saveGame();
             g_currentScene = GameScene_MainMenu;
         }
         else if (g_gameMouse.mouseOnCell)
@@ -1318,31 +1321,63 @@ void mouseMotionFunction_Victory(int x, int y)
 //=========================DATA CONTROLING FUNCTIONS========================//
 void saveGame()
 {
-    /*
     ofstream fout("save.bin", ios::binary);
     if (!fout)
     {
         return;
     }
-    fout.write((char*)&g_game, sizeof(g_game));
+
+    fout.write((char*)&g_game.field.width, sizeof(int));
+    fout.write((char*)&g_game.field.height, sizeof(int));
+    fout.write((char*)&g_game.field.bombsAmount, sizeof(int));
+    fout.write((char*)&g_game.field.flagsAmount, sizeof(int));
+    fout.write((char*)&g_game.time, sizeof(Time));
+
+    for (auto& fieldLine : g_game.field.field)
+    {
+        fout.write((char*)fieldLine.data(), sizeof(GameCell) * g_game.field.width);
+    }
+
+    fout.write((char*)g_game.field.mines.data(), sizeof(pair<int,int>) * g_game.field.bombsAmount);
+
     fout.close();
-    */
 }
 
 void loadGame()
 {
-    /*
     ifstream fin("save.bin", ios::binary);
     if (!fin)
     {
-        makeGame();
+        g_gameSetings.width = g_gameSetings.height = 10;
+        g_gameSetings.minesAmount = 10;
+        makeNewGame();
         return;
     }
-    fin.read((char*)&g_game, sizeof(g_game));
-    fin.close();
 
-    glutTimerFunc(1000, gameTimer, g_game.gameId);
-    */
+    fin.read((char*)&g_game.field.width, sizeof(int));
+    fin.read((char*)&g_game.field.height, sizeof(int));
+    fin.read((char*)&g_game.field.bombsAmount, sizeof(int));
+    fin.read((char*)&g_game.field.flagsAmount, sizeof(int));
+    fin.read((char*)&g_game.time, sizeof(Time));
+
+    g_game.field.field.resize(g_game.field.height);
+    for (auto& fieldLine : g_game.field.field)
+    {
+        fieldLine.resize(g_game.field.width);
+        fin.read((char*)fieldLine.data(), sizeof(GameCell) * g_game.field.width);
+    }
+
+    g_game.field.mines.resize(g_game.field.bombsAmount);
+    fin.read((char*)g_game.field.mines.data(), sizeof(pair<int,int>) * g_game.field.bombsAmount);
+
+    g_gameSetings.width = g_game.field.width;
+    g_gameSetings.height = g_game.field.height;
+    g_gameSetings.minesAmount = g_game.field.bombsAmount;
+
+    g_game.gameID++;
+
+    fin.close();
+    glutTimerFunc(1000, gameTimer, g_game.gameID);
 }
 
 void saveLeadersTable()
