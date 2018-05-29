@@ -1407,27 +1407,28 @@ void mouseClickFunction_Victory(int button, int state, int x, int y)
             if (!left.name[0]) return false;
             if (!right.name[0]) return true;
 
-            bool minesEq = left.fieldMinesAmount == right.fieldMinesAmount;
             bool hoursEq = left.time.hours == right.time.hours;
             bool minsEq = left.time.minutes == right.time.minutes;
 
-            if (left.fieldMinesAmount > right.fieldMinesAmount)
+            double leftDelta = double(left.fieldMinesAmount) * 100.0 / double(left.fieldWidth * left.fieldHeight);
+            double rightDelta = double(right.fieldMinesAmount) * 100.0 / double(right.fieldWidth * right.fieldHeight);
+            double delta = fabs(leftDelta - rightDelta);
+
+            bool deltaEquals = delta < 0.000001;
+
+            if (leftDelta > rightDelta)
             {
                 return true;
             }
-            else if (left.fieldWidth * left.fieldHeight < right.fieldWidth * right.fieldHeight)
+            else if (deltaEquals && left.time.hours < right.time.hours)
             {
                 return true;
             }
-            else if (minesEq && left.time.hours < right.time.hours)
+            else if (deltaEquals && hoursEq && left.time.minutes < right.time.minutes)
             {
                 return true;
             }
-            else if (minesEq && hoursEq && left.time.minutes < right.time.minutes)
-            {
-                return true;
-            }
-            else if (minesEq && hoursEq && minsEq && left.time.seconds < right.time.seconds)
+            else if (deltaEquals && hoursEq && minsEq && left.time.seconds < right.time.seconds)
             {
                 return true;
             }
